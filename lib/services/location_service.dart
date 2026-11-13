@@ -1,6 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 
-/// Encapsula el GPS: permisos + lectura de posición.
+/// Encapsula el GPS: permisos + lectura de posición (con tiempo límite)
 class LocationService {
   Future<Position> getCurrentPosition() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
@@ -18,7 +18,10 @@ class LocationService {
     }
 
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
     );
   }
 }

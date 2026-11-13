@@ -4,6 +4,7 @@ import '../app_routes.dart';
 import '../data/diary_repository.dart';
 import '../models/diary_entry.dart';
 
+/// Pantalla principal: lista de entradas con Drawer, FutureBuilder y Hero.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,11 +22,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _future = _repo.getAll();
   }
 
-  void _reload() => setState(() => _future = _repo.getAll());
+  /// Vuelve a leer las entradas de SQLite y redibuja la lista.
+  void _reload() {
+    setState(() {
+      _future = _repo.getAll();
+    });
+  }
 
+  /// Abre el formulario y recarga la lista al regresar.
   Future<void> _openForm() async {
-    final saved = await Navigator.pushNamed(context, AppRoutes.form);
-    if (saved == true) _reload();
+    await Navigator.pushNamed(context, AppRoutes.form);
+    if (mounted) _reload();
   }
 
   String _fmt(DateTime d) =>
@@ -49,7 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.book),
               title: const Text('Mis entradas'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _reload();
+              },
             ),
             ListTile(
               leading: const Icon(Icons.add_circle),
@@ -69,46 +79,66 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: FutureBuilder<List<DiaryEntry>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          final entries = snapshot.data ?? [];
-          if (entries.isEmpty) {
-            return const Center(child: Text('Aún no hay entradas. ¡Crea la primera!'));
-          }
-          return ListView.builder(
-            itemCount: entries.length,
-            itemBuilder: (context, i) {
-              final e = entries[i];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  leading: e.imagePath != null
-                      ? Hero(
-                    tag: 'entry-image-${e.id}',
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(File(e.imagePath!),
-                          width: 56, height: 56, fit: BoxFit.cover),
-                    ),
-                  )
-                      : const Icon(Icons.image_not_supported, size: 40),
-                  title: Text(e.title),
-                  subtitle: Text(_fmt(e.createdAt)),
-                  trailing: e.hasLocation ? const Icon(Icons.place) : null,
-                  onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.detail, arguments: e),
-                ),
-              );
-            },
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _reload();
+          await _future;
         },
+        child: FutureBuilder<List<DiaryEntry>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return ListView(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Error: ${snapshot.error}'),
+                  ),
+                ],
+              );
+            }
+            final entries = snapshot.data ?? [];
+            if (entries.isEmpty) {
+              return ListView(
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('Aún no hay entradas. ¡Crea la primera!')),
+                ],
+              );
+            }
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: entries.length,
+              itemBuilder: (context, i) {
+                final e = entries[i];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    leading: e.imagePath != null
+                        ? Hero(
+                      tag: 'entry-image-${e.id}',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(File(e.imagePath!),
+                            width: 56, height: 56, fit: BoxFit.cover),
+                      ),
+                    )
+                        : const Icon(Icons.image_not_supported, size: 40),
+                    title: Text(e.title),
+                    subtitle: Text(_fmt(e.createdAt)),
+                    trailing: e.hasLocation ? const Icon(Icons.place) : null,
+                    onTap: () => Navigator.pushNamed(
+                        context, AppRoutes.detail,
+                        arguments: e),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openForm,
