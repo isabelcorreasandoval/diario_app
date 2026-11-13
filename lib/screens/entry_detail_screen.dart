@@ -5,10 +5,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/diary_entry.dart';
 
+/// Pantalla de detalle: muestra la foto (animación Hero), el texto y un mapa
+/// interactivo con el lugar donde se escribió la entrada.
 class EntryDetailScreen extends StatelessWidget {
   final DiaryEntry entry;
   const EntryDetailScreen({super.key, required this.entry});
 
+  /// Abre Google Maps con las coordenadas guardadas; si falla, avisa al usuario.
   Future<void> _openInGoogleMaps(BuildContext context) async {
     final uri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=${entry.latitude},${entry.longitude}');

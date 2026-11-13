@@ -7,6 +7,8 @@ import '../models/diary_entry.dart';
 import '../services/image_service.dart';
 import '../services/location_service.dart';
 
+/// Pantalla de formulario: crea una entrada con texto (escrito o dictado),
+/// foto (cámara o galería) y ubicación GPS.
 class EntryFormScreen extends StatefulWidget {
   const EntryFormScreen({super.key});
 
@@ -14,6 +16,9 @@ class EntryFormScreen extends StatefulWidget {
   State<EntryFormScreen> createState() => _EntryFormScreenState();
 }
 
+/// Estado del formulario. Usa un repositorio (datos) y servicios (GPS, imagen)
+/// en lugar de acceder directamente a SQLite, siguiendo el principio SOLID de
+/// inversión de dependencias.
 class _EntryFormScreenState extends State<EntryFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
@@ -36,6 +41,8 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     _initSpeech();
   }
 
+  /// Prepara el micrófono y el reconocimiento de voz; si no está disponible,
+  /// desactiva el dictado sin cerrar la app.
   Future<void> _initSpeech() async {
     try {
       _speechAvailable = await _speech.initialize(
@@ -54,9 +61,11 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Muestra un mensaje breve al usuario (errores o avisos).
   void _msg(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
+  /// Obtiene una foto de la cámara o la galería y guarda su ruta.
   Future<void> _pickImage(ImageSource source) async {
     try {
       final path = await _imageService.pick(source);
@@ -66,6 +75,7 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     }
   }
 
+  /// Activa o detiene el dictado por voz y escribe el texto en el campo.
   Future<void> _toggleListening() async {
     if (!_speechAvailable) {
       _msg('Dictado no disponible (revisa permisos del micrófono).');
@@ -89,6 +99,8 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     );
   }
 
+  /// Valida el formulario, captura el GPS (con tiempo límite) y guarda la
+  /// entrada en SQLite. Si el GPS falla, guarda la entrada sin ubicación.
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
